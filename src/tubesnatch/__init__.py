@@ -1,9 +1,12 @@
 """TubeSnatch — a friendly GUI for downloading videos and playlists with yt-dlp."""
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
+
+# GitHub "owner/name" that publishes releases; the in-app updater checks it.
+GITHUB_REPO = "ghazanPK/TubeSnatch"
 
 
-def main() -> None:
+def main(exit_process: bool = True) -> int:
     import sys
 
     from PySide6.QtCore import Qt
@@ -30,9 +33,15 @@ def main() -> None:
     app.setStyle("Fusion")
     app.setStyleSheet(theme.stylesheet(str(paths.asset(""))))
 
-    win = MainWindow()
+    import os
+
+    updated = "--updated" in sys.argv or os.environ.pop("TUBESNATCH_UPDATED", "") == "1"
+    win = MainWindow(updated=updated)
     win.show()
     for arg in sys.argv[1:]:
         if arg.startswith("http"):
-            win.fetch(arg)
-    sys.exit(app.exec())
+            win.download.fetch(arg)
+    code = app.exec()
+    if exit_process:
+        sys.exit(code)
+    return code

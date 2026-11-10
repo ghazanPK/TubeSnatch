@@ -30,3 +30,13 @@ build-backend = "uv_build"
 build = [
     "pyinstaller>=6.22.3",
 ]
+dev = [
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "live: downloads from YouTube (opt-in with --live)",
+    "ffmpeg: needs FFmpeg",
+]

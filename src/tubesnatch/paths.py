@@ -32,7 +32,7 @@ def _bundled(name: str) -> Path | None:
     candidates = [
         app_root() / "bin" / f"{name}{EXE_SUFFIX}",  # PyInstaller: _internal/bin
         exe_dir / "bin" / f"{name}{EXE_SUFFIX}",
-        exe_dir.parent / "bin" / f"{name}{EXE_SUFFIX}",  # portable: <app>/runtime/pythonw.exe + <app>/bin
+        exe_dir.parent / "bin" / f"{name}{EXE_SUFFIX}",  # venv-style layouts (dev: <venv>/bin/deno)
     ]
     for c in candidates:
         if c.is_file():

@@ -71,11 +71,32 @@ if ($UpdateYtDlp) {
 }
 
 # --- FFmpeg (gyan.dev release essentials: widely used, so SAC trusts it) ----
-$ffZip = Join-Path $Cache "ffmpeg-gyan-essentials.zip"
-$ffDir = Join-Path $Cache "gyan"
-if (-not (Test-Path $ffZip)) {
-    Step "Downloading FFmpeg (https://www.gyan.dev/ffmpeg/builds/)"
-    Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile $ffZip -UseBasicParsing
+# Same builds gyan.dev publishes, mirrored on GitHub (GyanD/codexffmpeg) — faster and versioned.
+$ffVer = $null
+try {
+    $headers = @{ "User-Agent" = "TubeSnatch-build" }
+    if ($env:GITHUB_TOKEN) { $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN" }
+    $ffVer = (Invoke-RestMethod "https://api.github.com/repos/GyanD/codexffmpeg/releases/latest" -Headers $headers).tag_name
+} catch { Write-Host "GitHub API unavailable ($_) - falling back to gyan.dev" }
+if (-not $ffVer) {
+    $cached = Get-ChildItem $Cache -Filter "ffmpeg-*-essentials_build.zip" -ErrorAction SilentlyContinue | Select-Object -Last 1
+    if ($cached) { $ffVer = $cached.Name -replace '^ffmpeg-(.+)-essentials_build\.zip$', '$1' }
+}
+$ffZip = Join-Path $Cache "ffmpeg-$ffVer-essentials_build.zip"
+$ffDir = Join-Path $Cache "gyan-$ffVer"
+if (-not $ffVer -or -not (Test-Path $ffZip)) {
+    Step "Downloading FFmpeg $ffVer (gyan.dev essentials build)"
+    $tmpZip = Join-Path $Cache "ffmpeg-download.zip"
+    try {
+        if (-not $ffVer) { throw "no version" }
+        Invoke-WebRequest "https://github.com/GyanD/codexffmpeg/releases/download/$ffVer/ffmpeg-$ffVer-essentials_build.zip" -OutFile $tmpZip -UseBasicParsing
+    } catch {
+        Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile $tmpZip -UseBasicParsing
+        $ffVer = "release"
+        $ffZip = Join-Path $Cache "ffmpeg-$ffVer-essentials_build.zip"
+        $ffDir = Join-Path $Cache "gyan-$ffVer"
+    }
+    Move-Item -Force $tmpZip $ffZip
 }
 if (-not (Get-ChildItem -Recurse -Filter ffmpeg.exe $ffDir -ErrorAction SilentlyContinue)) {
     Expand-Archive $ffZip -DestinationPath $ffDir -Force
@@ -95,11 +116,15 @@ if (Test-Path $App) { Remove-Item -Recurse -Force $App }
 
 if (-not $PyInstaller) {
     # ======================= portable (default) ============================
+    # Layout: the app folder IS the (signed) CPython runtime, plus TubeSnatch.exe = a renamed copy of
+    # the PSF-signed pythonw.exe. Smart App Control blocks unsigned .exe files and web-downloaded
+    # .cmd/.lnk launchers, but a renamed signed binary keeps its valid signature.
     Step "Creating portable runtime (signed CPython $(& $PyOrg -c 'import platform;print(platform.python_version())'))"
-    $Runtime = Join-Path $App "runtime"
+    $Runtime = $App
     New-Item -ItemType Directory -Force $App | Out-Null
-    Copy-Item -Recurse $PyOrgDir $Runtime
+    Copy-Item -Recurse (Join-Path $PyOrgDir "*") $App
     $RtPy = Join-Path $Runtime "python.exe"
+    if (Test-Path (Join-Path $App "LICENSE.txt")) { Rename-Item (Join-Path $App "LICENSE.txt") "PYTHON_LICENSE.txt" }
 
     Step "Installing app + dependencies into the runtime"
     $req = Join-Path $Build "requirements.txt"
@@ -113,12 +138,18 @@ if (-not $PyInstaller) {
     & $RtPy scripts\make_icon.py $Icon
     Need $LASTEXITCODE "icon"
 
-    # deno.exe from the `deno` wheel lands in runtime\Scripts; move it next to ffmpeg
+    # Launch hook: when started as TubeSnatch.exe (no Python args) the interpreter runs the app.
+    Set-Content -Encoding ascii (Join-Path $Runtime "Lib\site-packages\zzz_tubesnatch_autostart.pth") "import tubesnatch._autostart"
+    Copy-Item (Join-Path $Runtime "pythonw.exe") (Join-Path $App "TubeSnatch.exe")
+    Remove-Item (Join-Path $Runtime "pythonw.exe")
+
+    # deno.exe from the `deno` wheel lands in Scripts\; move it next to ffmpeg
     Copy-Item (Join-Path $Runtime "Scripts\deno.exe") $Bin -Force
 
     Step "Trimming runtime"
+    # pip stays: the in-app "Update yt-dlp" button uses it
     $trim = @("Lib\test", "Lib\idlelib", "Lib\tkinter", "Lib\turtledemo", "Lib\ensurepip", "Lib\lib2to3",
-              "Lib\site-packages\pip", "include", "libs", "Scripts")
+              "include", "libs", "Scripts")
     foreach ($t in $trim) { $p = Join-Path $Runtime $t; if (Test-Path $p) { Remove-Item -Recurse -Force $p } }
     $pyside = Join-Path $Runtime "Lib\site-packages\PySide6"
     # Qt pieces this app never loads (keeps the folder ~40% smaller)
@@ -137,39 +168,15 @@ if (-not $PyInstaller) {
     Copy-Item -Recurse $Bin (Join-Path $App "bin")
 
     Step "Verifying runtime"
-    & $RtPy -c "import tubesnatch, yt_dlp, PySide6.QtWidgets, PySide6.QtSvg, PySide6.QtNetwork; from tubesnatch import paths; print('yt-dlp', yt_dlp.version.__version__, '| ffmpeg', paths.ffmpeg_dir(), '| deno', paths.deno_path()); assert paths.ffmpeg_dir() and paths.deno_path()"
+    & $RtPy -c "import tubesnatch, yt_dlp, pip, PySide6.QtWidgets, PySide6.QtSvg, PySide6.QtNetwork; from tubesnatch import paths; print('yt-dlp', yt_dlp.version.__version__, '| ffmpeg', paths.ffmpeg_dir(), '| deno', paths.deno_path()); assert paths.ffmpeg_dir() and paths.deno_path()"
     Need $LASTEXITCODE "runtime check"
     Copy-Item $Icon (Join-Path $App "TubeSnatch.ico")
+    if ((Get-AuthenticodeSignature (Join-Path $App "TubeSnatch.exe")).Status -ne "Valid") { throw "TubeSnatch.exe lost its signature" }
 
-    # Launchers: a shortcut (nice icon) + a .cmd fallback + a helper to (re)create shortcuts
-    @"
-@echo off
-rem Starts TubeSnatch with its bundled, signed Python runtime.
-start "" "%~dp0runtime\pythonw.exe" -m tubesnatch %*
-"@ | Set-Content -Encoding ascii (Join-Path $App "TubeSnatch.cmd")
-
-    @'
-@echo off
-rem Creates "TubeSnatch" shortcuts here, on the Desktop and in the Start menu.
-rem Run this again if you move the TubeSnatch folder.
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$d='%~dp0'.TrimEnd('\'); $ws=New-Object -ComObject WScript.Shell;" ^
-  "foreach($p in @($d, [Environment]::GetFolderPath('Desktop'), (Join-Path ([Environment]::GetFolderPath('Programs')) ''))){" ^
-  " $s=$ws.CreateShortcut((Join-Path $p 'TubeSnatch.lnk')); $s.TargetPath=(Join-Path $d 'runtime\pythonw.exe');" ^
-  " $s.Arguments='-m tubesnatch'; $s.WorkingDirectory=$d; $s.IconLocation=(Join-Path $d 'TubeSnatch.ico');" ^
-  " $s.Description='TubeSnatch - video and playlist downloader'; $s.Save() }"
-echo Shortcuts created. You can start TubeSnatch from the Desktop or the Start menu.
-pause
-'@ | Set-Content -Encoding ascii (Join-Path $App "Create shortcuts.cmd")
-
-    $ws = New-Object -ComObject WScript.Shell
-    $lnk = $ws.CreateShortcut((Join-Path $App "TubeSnatch.lnk"))
-    $lnk.TargetPath = Join-Path $Runtime "pythonw.exe"
-    $lnk.Arguments = "-m tubesnatch"
-    $lnk.WorkingDirectory = $App
-    $lnk.IconLocation = Join-Path $App "TubeSnatch.ico"
-    $lnk.Description = "TubeSnatch - video and playlist downloader"
-    $lnk.Save()
+    # Bundled component versions (shown in release notes)
+    $manifest = & $RtPy -c "import importlib.metadata as m, platform; print('\n'.join(f'{p}: {m.version(p)}' for p in ['yt-dlp','yt-dlp-ejs','deno','PySide6-Essentials']) + f'\nPython: {platform.python_version()}')"
+    $ffLine = (& (Join-Path $App "bin\ffmpeg.exe") -version | Select-Object -First 1) -replace ' Copyright.*', ''
+    @("TubeSnatch: $version") + $manifest + @("FFmpeg: $ffLine") | Set-Content -Encoding utf8 (Join-Path $App "VERSIONS.txt")
     $flavour = "portable"
 }
 else {
@@ -210,6 +217,8 @@ Step "Zipping"
 $zipOut = Join-Path $Dist "TubeSnatch-$version-win64-$flavour.zip"
 if (Test-Path $zipOut) { Remove-Item $zipOut }
 Compress-Archive -Path $App -DestinationPath $zipOut -CompressionLevel Optimal
+$hash = (Get-FileHash -Algorithm SHA256 $zipOut).Hash.ToLower()
+"$hash  $(Split-Path -Leaf $zipOut)" | Set-Content -Encoding ascii (Join-Path $Dist "SHA256SUMS.txt")
 
 $appMB = "{0:N0} MB" -f ((Get-ChildItem -Recurse $App | Measure-Object Length -Sum).Sum / 1MB)
 $zipMB = "{0:N0} MB" -f ((Get-Item $zipOut).Length / 1MB)

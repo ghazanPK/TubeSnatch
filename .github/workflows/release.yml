@@ -1,0 +1,57 @@
+# Publishes a GitHub Release with the portable Windows zip.
+# Triggers: pushing a v* tag, running it by hand, or being called by the daily dependency update.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to (re)publish, e.g. v1.1.0
+        required: true
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-windows.yml
+    with:
+      ref: ${{ inputs.tag || github.ref_name }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: tubesnatch-windows
+          path: out
+      - name: Release notes
+        run: python3 scripts/release_notes.py "$TAG" out/TubeSnatch/VERSIONS.txt > notes.md && cat notes.md
+      - name: Create or update the release
+        run: |
+          shopt -s nullglob
+          files=(out/*.zip out/SHA256SUMS.txt)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+            gh release edit "$TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" "${files[@]}" --title "TubeSnatch $TAG" --notes-file notes.md --latest
+          fi

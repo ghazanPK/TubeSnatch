@@ -30,10 +30,19 @@ JavaScript challenges. <span class="muted">Unlicense / MIT / ISC.</span></li>
 from the <a href="https://pypi.org/project/deno/">deno</a> PyPI package. <span class="muted">MIT License.</span></li>
 </ul>
 
+<h3>Online services</h3>
+<ul>
+<li><a href="https://sponsor.ajay.app"><b>SponsorBlock</b></a> — community-submitted sponsor segments, used only when
+“Remove sponsor segments” is on (via yt-dlp). <span class="muted">Data under CC BY-NC-SA 4.0.</span></li>
+<li><a href="https://pypi.org"><b>PyPI JSON API</b></a> — checks for new yt-dlp versions for the engine updater.</li>
+<li><a href="https://docs.github.com/en/rest/releases"><b>GitHub Releases API</b></a> — checks for and downloads
+new TubeSnatch releases.</li>
+</ul>
+
 <h3>Media processing</h3>
 <ul>
 <li><a href="https://ffmpeg.org"><b>FFmpeg</b></a> — merges video + audio, converts to MP3 and embeds
-cover art and tags. <span class="muted">GPL-3.0 build from
+cover art and tags, normalises loudness and powers the Convert tab. <span class="muted">GPL-3.0 build from
 <a href="https://www.gyan.dev/ffmpeg/builds/">gyan.dev</a>.</span></li>
 <li><a href="https://github.com/quodlibet/mutagen"><b>mutagen</b></a> — audio tag handling.
 <span class="muted">GPL-2.0-or-later.</span></li>

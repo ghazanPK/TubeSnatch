@@ -1,0 +1,73 @@
+# Reusable: build the portable Windows package, test the *packaged* app, upload it as an artifact.
+name: Build Windows package
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref (branch/tag/SHA) to build
+        type: string
+        default: ""
+      live:
+        description: Also run the live YouTube tests (informational, never fails the build)
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Cache downloads (uv, CPython, FFmpeg)
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build/cache
+            .build/pyorg
+            .build/tools
+          key: win-build-${{ hashFiles('uv.lock') }}
+          restore-keys: win-build-
+
+      - name: Build portable package
+        shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts\build_windows.ps1
+
+      - name: Test the packaged app
+        shell: powershell
+        run: |
+          # Copy the build so pytest isn't installed into the shipped runtime
+          $t = Join-Path $env:RUNNER_TEMP "ts-test"
+          Copy-Item -Recurse dist\TubeSnatch $t
+          & "$t\python.exe" -m pip install --quiet --disable-pip-version-check --no-warn-script-location pytest
+          $env:QT_QPA_PLATFORM = "offscreen"
+          & "$t\python.exe" -m pytest tests -q -p no:cacheprovider
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          # The launcher must stay a validly signed binary (Smart App Control)
+          if ((Get-AuthenticodeSignature "$t\TubeSnatch.exe").Status -ne "Valid") { throw "TubeSnatch.exe signature invalid" }
+
+      - name: Live YouTube test (informational)
+        if: inputs.live
+        continue-on-error: true
+        shell: powershell
+        run: |
+          $t = Join-Path $env:RUNNER_TEMP "ts-test"
+          $env:QT_QPA_PLATFORM = "offscreen"
+          & "$t\python.exe" -m pytest tests -q -p no:cacheprovider --live -m live
+          if ($LASTEXITCODE) { Write-Host "::warning::Live YouTube test failed (often bot-detection on CI runners)"; exit 1 }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tubesnatch-windows
+          path: |
+            dist/*.zip
+            dist/SHA256SUMS.txt
+            dist/TubeSnatch/VERSIONS.txt
+          if-no-files-found: error
+          retention-days: 14

@@ -87,6 +87,27 @@ QPushButton#segment[pos="left"] {{ border-top-left-radius: 9px; border-bottom-le
 QPushButton#segment[pos="right"] {{ border-top-right-radius: 9px; border-bottom-right-radius: 9px; border-left: none; }}
 QPushButton#segment:checked {{ background: {GRADIENT}; color: white; border-color: transparent; }}
 
+QPushButton#nav {{
+    background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 8px 16px;
+    color: {MUTED}; font-size: 10.5pt;
+}}
+QPushButton#nav:hover {{ color: {TEXT}; background: {SURFACE}; }}
+QPushButton#nav:checked {{ color: {TEXT}; background: {SURFACE_2}; border: 1px solid {BORDER};
+    border-bottom: 2px solid {ACCENT_A}; }}
+QPushButton#badge {{
+    background: rgba(124, 92, 255, 0.18); border: 1px solid {ACCENT_B}; color: #cfc4ff;
+    border-radius: 14px; padding: 6px 14px;
+}}
+QPushButton#badge:hover {{ background: rgba(124, 92, 255, 0.32); }}
+QLabel#dropZone {{
+    border: 2px dashed #343a4f; border-radius: 14px; color: {MUTED}; font-size: 11pt; padding: 30px;
+}}
+QRadioButton {{ spacing: 8px; background: transparent; }}
+QRadioButton::indicator {{ width: 16px; height: 16px; border-radius: 9px; border: 1px solid #4a5068;
+    background: {SURFACE_2}; }}
+QRadioButton::indicator:checked {{ border: 5px solid {ACCENT_B}; background: white; }}
+QMessageBox QLabel {{ min-width: 320px; }}
+
 QCheckBox {{ spacing: 8px; background: transparent; }}
 QCheckBox::indicator {{
     width: 16px; height: 16px; border-radius: 5px; border: 1px solid #3a4054; background: {SURFACE_2};

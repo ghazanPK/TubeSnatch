@@ -12,9 +12,18 @@ conversion is done by the projects below, which are bundled in the Windows build
 | **Qt / Qt for Python (PySide6)** | GUI toolkit | LGPL-3.0 | https://doc.qt.io/qtforpython-6/ |
 | **mutagen** | Audio metadata (used by yt-dlp) | GPL-2.0-or-later | https://github.com/quodlibet/mutagen |
 | **requests, urllib3, certifi, brotli, websockets** | Networking helpers used by yt-dlp | Apache-2.0 / MIT / MPL-2.0 / BSD | see each project on PyPI |
-| **CPython** (python.org NuGet package) | The signed Python runtime in the portable Windows build | PSF License | https://www.python.org |
-| **PyInstaller** (optional build) | Packages the alternative single-exe Windows build | GPL-2.0 with bootloader exception | https://pyinstaller.org |
+| **CPython** (python.org NuGet package) | The signed Python runtime of the portable Windows build. `TubeSnatch.exe` is its `pythonw.exe`, renamed | PSF License | https://www.python.org |
+| **PyInstaller** (optional build) | Packages the alternative classic-exe Windows build (`-PyInstaller`) | GPL-2.0 with bootloader exception | https://pyinstaller.org |
 | **uv** (build time only) | Python and dependency management for the build | MIT / Apache-2.0 | https://github.com/astral-sh/uv |
+
+## Online services
+
+| Service | Used for | Terms / license |
+|---|---|---|
+| **SponsorBlock** API (via yt-dlp) | Sponsor segments to cut, only when "Remove sponsor segments" is on | Data under CC BY-NC-SA 4.0. https://sponsor.ajay.app |
+| **PyPI JSON API** | Checking for and installing new yt-dlp versions (engine updater) | https://pypi.org · https://warehouse.pypa.io/api-reference/json.html |
+| **GitHub Releases API** | Checking for and downloading new TubeSnatch releases | https://docs.github.com/en/rest/releases |
+| **YouTube** (via yt-dlp) | Video metadata, thumbnails and media | YouTube Terms of Service |
 
 ## Inspiration
 

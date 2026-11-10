@@ -1,0 +1,73 @@
+# Daily: if yt-dlp (or its helpers) published a new version, bump uv.lock, test,
+# tag a patch release and publish it — no human step. yt-dlp has no fixed release
+# schedule, so checking daily is how we "catch" releases.
+name: Daily dependency update
+
+on:
+  schedule:
+    - cron: "23 5 * * *" # 05:23 UTC every day
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deps-update
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Upgrade engine packages in uv.lock
+        id: lock
+        run: |
+          cp uv.lock /tmp/uv.lock.old
+          uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs --upgrade-package deno --upgrade-package certifi
+          python3 scripts/lock_diff.py /tmp/uv.lock.old uv.lock > /tmp/changes.md
+          cat /tmp/changes.md
+          if [ -s /tmp/changes.md ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; else echo "changed=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Test with the new versions
+        if: steps.lock.outputs.changed == 'true'
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3
+          uv sync --frozen
+          uv run pytest -q
+
+      - name: Live YouTube test (informational)
+        if: steps.lock.outputs.changed == 'true'
+        continue-on-error: true
+        run: uv run pytest -q --live -m live
+
+      - name: Bump version, commit, tag, push
+        id: release
+        if: steps.lock.outputs.changed == 'true'
+        run: |
+          new=$(python3 scripts/bump_version.py patch)
+          uv lock   # record the new project version in uv.lock
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add uv.lock pyproject.toml src/tubesnatch/__init__.py
+          { echo "Update dependencies for v$new"; echo; cat /tmp/changes.md; } > /tmp/msg.txt
+          git commit -F /tmp/msg.txt
+          git tag -a "v$new" -m "TubeSnatch v$new"
+          git push origin "HEAD:${GITHUB_REF_NAME}" "v$new"
+          echo "tag=v$new" >> "$GITHUB_OUTPUT"
+
+  # Tags pushed with GITHUB_TOKEN don't trigger other workflows, so call the release directly.
+  release:
+    needs: bump
+    if: needs.bump.outputs.tag != ''
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.bump.outputs.tag }}
+    permissions:
+      contents: write

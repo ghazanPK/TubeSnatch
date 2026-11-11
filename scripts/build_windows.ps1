@@ -175,7 +175,10 @@ if (-not $PyInstaller) {
 
     # Bundled component versions (shown in release notes)
     $manifest = & $RtPy -c "import importlib.metadata as m, platform; print('\n'.join(f'{p}: {m.version(p)}' for p in ['yt-dlp','yt-dlp-ejs','deno','PySide6-Essentials']) + f'\nPython: {platform.python_version()}')"
-    $ffLine = (& (Join-Path $App "bin\ffmpeg.exe") -version | Select-Object -First 1) -replace ' Copyright.*', ''
+    # Capture everything first: `| Select-Object -First 1` would close the pipe early and ffmpeg would exit non-zero
+    $ffOut = @(& (Join-Path $App "bin\ffmpeg.exe") -version)
+    Need $LASTEXITCODE "ffmpeg -version"
+    $ffLine = $ffOut[0] -replace ' Copyright.*', ''
     @("TubeSnatch: $version") + $manifest + @("FFmpeg: $ffLine") | Set-Content -Encoding utf8 (Join-Path $App "VERSIONS.txt")
     $flavour = "portable"
 }
@@ -210,7 +213,7 @@ VSVersionInfo(
     $flavour = "pyinstaller"
 }
 
-foreach ($f in "README.md", "THIRD_PARTY_NOTICES.md") { Copy-Item $f $App }
+foreach ($f in "README.md", "THIRD_PARTY_NOTICES.md", "LICENSE") { Copy-Item $f $App }
 if (Test-Path (Join-Path $Build "FFMPEG_LICENSE.txt")) { Copy-Item (Join-Path $Build "FFMPEG_LICENSE.txt") $App }
 
 Step "Zipping"
@@ -223,3 +226,4 @@ $hash = (Get-FileHash -Algorithm SHA256 $zipOut).Hash.ToLower()
 $appMB = "{0:N0} MB" -f ((Get-ChildItem -Recurse $App | Measure-Object Length -Sum).Sum / 1MB)
 $zipMB = "{0:N0} MB" -f ((Get-Item $zipOut).Length / 1MB)
 Write-Host "`nDone! ($flavour) $App  [$appMB]  ->  $zipOut [$zipMB]" -ForegroundColor Green
+exit 0  # every native step above is checked; don't leak a stale $LASTEXITCODE to the caller

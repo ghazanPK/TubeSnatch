@@ -174,7 +174,7 @@ class ConvertTab(QWidget):
         self.cfg.set("conv_target", t)
         self.quality.clear()
         audio = engine.is_audio(t)
-        self.qual_lbl.setText("Bitrate" if audio else "Max height")
+        self.qual_lbl.setText("Bitrate" if audio else "Resolution")
         if audio:
             if t in engine.LOSSLESS:
                 self.quality.addItem("Lossless", 0)

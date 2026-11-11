@@ -1,10 +1,12 @@
 [project]
 name = "tubesnatch"
-version = "1.0.0"
+version = "1.1.0"
 description = "TubeSnatch: a GUI for downloading YouTube videos and playlists as MP4 or MP3, built on yt-dlp"
 authors = [
     { name = "ALI GHAZANFAR", email = "38058692+ghazanPK@users.noreply.github.com" }
 ]
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.13"
 dependencies = [
     "brotli>=1.2.1",

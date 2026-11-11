@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QProgressBar,
+    QSizePolicy,
     QSpinBox,
     QStackedWidget,
     QTableWidget,
@@ -282,7 +283,8 @@ class DownloadTab(QWidget):
         self.filter_input = QLineEdit()
         self.filter_input.setPlaceholderText("🔍  Filter by title…")
         self.filter_input.setClearButtonEnabled(True)
-        self.filter_input.setMaximumWidth(220)
+        self.filter_input.setMinimumWidth(190)
+        self.filter_input.setMaximumWidth(240)
         self.filter_input.textChanged.connect(self._apply_filter)
         bar.addWidget(self.filter_input)
         bar.addStretch(1)
@@ -346,10 +348,12 @@ class DownloadTab(QWidget):
         self.overall.setTextVisible(False)
         self.overall.setRange(0, 1000)
         status_row = QHBoxLayout()
+        self.overall_lbl.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
         status_row.addWidget(self.overall_lbl)
         status_row.addSpacing(12)
         status_row.addWidget(self.status_lbl, 1)
         self.status_lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.status_lbl.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)  # may shrink; full text in tooltip
         prog_box.addLayout(status_row)
         prog_box.addWidget(self.overall)
         foot.addLayout(prog_box, 1)

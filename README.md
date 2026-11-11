@@ -6,6 +6,23 @@ you pick, or as audio (**MP3 / M4A / Opus / FLAC / WAV**) with cover art and tag
 
 Under the hood it uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://ffmpeg.org).
 
+![TubeSnatch: a playlist loaded in the Download tab, with per-video formats, a trimmed clip and live progress](docs/screenshots/download.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/convert.png" alt="Convert tab: local files being converted to MP4"><br><sub><b>Convert</b>: turn local files into MP4, MP3, FLAC…</sub></td>
+    <td width="50%"><img src="docs/screenshots/settings.png" alt="Settings tab: extras, playlist options and updates"><br><sub><b>Settings</b>: subtitles, SponsorBlock, normalisation and updates</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/trim.png" alt="Per-video options: trim to a time range or split by chapters"><br><sub><b>✂ Per-video options</b>: trim a clip or split by chapters</sub></td>
+    <td width="50%"><img src="docs/screenshots/about.png" alt="About and credits dialog"><br><sub><b>About & credits</b>: every project and service used</sub></td>
+  </tr>
+</table>
+
+<sub>Screenshots show the <a href="https://www.youtube.com/playlist?list=PLav47HAVZMjnTFVZL-aImCQIC0uLZtNCz">Blender Open Movies</a>
+playlist. Films © Blender Foundation / Blender Studio, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
+Regenerate them with <code>scripts/make_screenshots.py</code>.</sub>
+
 ## Features
 
 **Download**
@@ -77,6 +94,7 @@ scripts/
   build_windows.ps1  Windows build (portable; -PyInstaller for a classic exe)
   build_windows.sh   run the Windows build from WSL
   bump_version.py · lock_diff.py · release_notes.py   used by the release pipeline
+  make_screenshots.py  regenerates docs/screenshots (README images)
 tests/               pytest suite (run by CI on Linux and against the packaged Windows build)
 .github/workflows/   CI, release and daily dependency update
 ```
@@ -124,6 +142,11 @@ TubeSnatch is a GUI over excellent open-source projects and services:
 - The playlist-first workflow is inspired by **[Elephant](https://github.com/meowcateatrat/elephant)** by meowcateatrat.
 
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for licenses. The same credits are in the app under **About & credits**.
+
+## License
+
+TubeSnatch's own code is [MIT licensed](LICENSE). The Windows release bundles third-party software under its own
+licenses (FFmpeg GPL-3.0, Qt LGPL-3.0, CPython PSF, and others); see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Disclaimer
 

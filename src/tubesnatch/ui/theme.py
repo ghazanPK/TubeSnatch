@@ -103,9 +103,12 @@ QLabel#dropZone {{
     border: 2px dashed #343a4f; border-radius: 14px; color: {MUTED}; font-size: 11pt; padding: 30px;
 }}
 QRadioButton {{ spacing: 8px; background: transparent; }}
-QRadioButton::indicator {{ width: 16px; height: 16px; border-radius: 9px; border: 1px solid #4a5068;
+QRadioButton::indicator {{ width: 16px; height: 16px; border-radius: 8px; border: 1px solid #4a5068;
     background: {SURFACE_2}; }}
-QRadioButton::indicator:checked {{ border: 5px solid {ACCENT_B}; background: white; }}
+QRadioButton::indicator:hover {{ border-color: {ACCENT_B}; }}
+QRadioButton::indicator:checked {{ border: 1px solid {ACCENT_B};
+    background: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,
+        stop:0 white, stop:0.38 white, stop:0.48 {ACCENT_B}, stop:1 {ACCENT_B}); }}
 QMessageBox QLabel {{ min-width: 320px; }}
 
 QCheckBox {{ spacing: 8px; background: transparent; }}

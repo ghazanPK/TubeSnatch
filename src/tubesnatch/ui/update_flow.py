@@ -64,6 +64,8 @@ class UpdateManager(QObject):
     # ----------------------------------------------------------------- app releases
 
     def check_app(self, manual: bool):
+        if not manual and self.cfg.get("update_mode") == "off":  # setting may have changed since startup
+            return
         self.st.set_busy(app=True)
         self.st.set_app_status("Checking GitHub for a new release…")
         self._run(updates.check_app, done=lambda info: self._app_checked(manual, info),
@@ -199,7 +201,7 @@ class UpdateManager(QObject):
     # ----------------------------------------------------------------- engine (yt-dlp)
 
     def check_engine(self, manual: bool):
-        if not updates.is_portable():
+        if not updates.is_portable() or (not manual and self.cfg.get("update_mode") == "off"):
             return
         if self.engine_restart_pending:
             self.ask_restart()

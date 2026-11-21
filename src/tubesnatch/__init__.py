@@ -1,6 +1,6 @@
 """TubeSnatch — a friendly GUI for downloading videos and playlists with yt-dlp."""
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 # GitHub "owner/name" that publishes releases; the in-app updater checks it.
 GITHUB_REPO = "ghazanPK/TubeSnatch"
